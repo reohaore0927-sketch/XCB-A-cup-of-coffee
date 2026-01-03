@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>XCB-一杯のコーヒー</title>
+
 <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%22512%22 height=%22512%22 viewBox=%220 0 512 512%22><rect width=%22512%22 height=%22512%22 fill=%22%23ffffff%22/><text x=%2250%25%22 y=%2250%25%22 font-family=%22sans-serif%22 font-weight=%22bold%22 font-size=%22120%22 fill=%22%23333333%22 text-anchor=%22middle%22 dominant-baseline=%22central%22>☕ XCB</text></svg>">
 <link rel="icon" type="image/png" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%22512%22 height=%22512%22 viewBox=%220 0 512 512%22><rect width=%22512%22 height=%22512%22 fill=%22%23ffffff%22/><text x=%2250%25%22 y=%2250%25%22 font-family=%22sans-serif%22 font-weight=%22bold%22 font-size=%22120%22 fill=%22%23333333%22 text-anchor=%22middle%22 dominant-baseline=%22central%22>☕ XCB</text></svg>">
 <meta name="theme-color" content="#f5f7fa">
@@ -15,18 +16,16 @@
   label { display: block; font-weight: bold; margin-bottom: 8px; font-size: 14px; color: #666; }
   input { width: 100%; padding: 15px; margin-bottom: 5px; box-sizing: border-box; font-size: 18px; border: 2px solid #eee; border-radius: 10px; -webkit-appearance: none; transition: all 0.2s; }
   input:focus { border-color: #007bff; outline: none; }
-  input:disabled { background-color: #f0f0f0; color: #555; border-color: #ddd; cursor: not-allowed; }
   
-  /* ボタン類のスタイル */
   button { width: 100%; padding: 16px; background-color: #007bff; color: white; border: none; font-size: 18px; font-weight: bold; cursor: pointer; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,123,255,0.2); transition: transform 0.1s, background 0.2s; }
   button:active { transform: scale(0.98); background-color: #0056b3; }
   button:disabled { background-color: #ccc; box-shadow: none; cursor: not-allowed; transform: none; }
   button.secondary { background-color: #f0f2f5; color: #555; font-size: 14px; padding: 8px 12px; margin-bottom: 0; box-shadow: none; border: 1px solid #ddd; width: auto; }
   
   /* 形式切り替えボタン */
-  .type-selector { display: flex; gap: 5px; margin-bottom: 15px; }
-  .type-btn { flex: 1; padding: 10px; font-size: 12px; background: #eee; border: none; border-radius: 6px; cursor: pointer; color: #666; }
-  .type-btn.active { background: #007bff; color: white; font-weight: bold; }
+  .type-selector { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 15px; }
+  .type-btn { padding: 12px; font-size: 12px; background: #eee; border: 1px solid #ddd; border-radius: 8px; cursor: pointer; color: #555; text-align: center; height: 100%; }
+  .type-btn.active { background: #007bff; color: white; border-color: #0056b3; font-weight: bold; box-shadow: inset 0 2px 4px rgba(0,0,0,0.1); }
 
   .live-preview { text-align: right; font-size: 20px; color: #007bff; font-weight: bold; margin-bottom: 20px; min-height: 1.5em; }
   .preview-warn { color: #dc3545 !important; font-size: 16px; }
@@ -34,7 +33,9 @@
   #result { display: none; text-align: center; border-top: 2px dashed #eee; padding-top: 20px; margin-top: 10px; }
   #qr-image { margin: 15px auto; display: block; max-width: 100%; border-radius: 12px; border: 2px solid #eee; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
   .total-display { font-size: 28px; font-weight: 800; color: #333; margin: 10px 0; word-break: break-all; }
-  .debug-text { font-size: 10px; color: #999; margin-top: 5px; word-break: break-all; font-family: monospace; background: #f9f9f9; padding: 5px; border-radius: 4px; }
+  
+  /* デバッグ用表示 */
+  .debug-info { font-size: 10px; color: #999; margin-top: 10px; text-align: left; background: #f8f9fa; padding: 10px; border-radius: 6px; border: 1px solid #eee; word-break: break-all; font-family: monospace; }
 </style>
 </head>
 <body>
@@ -55,14 +56,14 @@
   <div class="card">
     <label>請求金額 (最大500円)</label>
     <input type="number" id="jpyAmount" placeholder="0" inputmode="numeric" max="500" oninput="calculatePreview()" onclick="this.select();">
-    
     <div class="live-preview" id="live-xcb">0.0000 XCB</div>
 
-    <label style="margin-bottom:5px;">QR形式を選択 (エラー回避)</label>
+    <label style="margin-bottom:8px;">QR形式を選択 (スキャン成功するまで試してください)</label>
     <div class="type-selector">
-      <button class="type-btn active" onclick="setQrType('core')" id="btn-core">Type A<br>(core)</button>
-      <button class="type-btn" onclick="setQrType('xcb')" id="btn-xcb">Type B<br>(xcb)</button>
-      <button class="type-btn" onclick="setQrType('simple')" id="btn-simple">Type C<br>(Simple)</button>
+      <button class="type-btn active" onclick="setQrType('json')" id="btn-json">Type 1: JSON<br>(推奨: PayTo標準)</button>
+      <button class="type-btn" onclick="setQrType('ican')" id="btn-ican">Type 2: ICAN<br>(payto://ican/xcb)</button>
+      <button class="type-btn" onclick="setQrType('xcb')" id="btn-xcb">Type 3: URI<br>(payto://xcb/cb...)</button>
+      <button class="type-btn" onclick="setQrType('raw')" id="btn-raw">Type 4: Raw<br>(cb...)</button>
     </div>
     
     <button id="generateBtn" onclick="generatePayTo()">QRコード作成</button>
@@ -72,15 +73,18 @@
       <div class="total-display"><span id="display-xcb">0</span> XCB</div>
       <img id="qr-image" src="" alt="QR Code" width="250" height="250">
       
-      <div class="debug-text" id="qr-data-preview"></div>
-      
       <div style="font-size:12px; color:#aaa; margin-top:10px; font-weight:bold;">CorePassなどでスキャン</div>
+      
+      <div class="debug-info">
+        <strong>QR Data Content:</strong><br>
+        <span id="qr-data-preview">--</span>
+      </div>
     </div>
   </div>
 
 <script>
 const MAX_AMOUNT = 500;
-let currentQrType = 'core'; // 初期値
+let currentQrType = 'json'; // デフォルトをJSONに変更
 
 window.onload = function() {
   loadAddress();
@@ -102,15 +106,19 @@ function loadAddress() {
   }
 }
 
-// QR形式の切り替え処理
+// QR形式切り替え
 function setQrType(type) {
   currentQrType = type;
-  // ボタンの見た目切り替え
-  document.getElementById('btn-core').className = 'type-btn' + (type === 'core' ? ' active' : '');
-  document.getElementById('btn-xcb').className = 'type-btn' + (type === 'xcb' ? ' active' : '');
-  document.getElementById('btn-simple').className = 'type-btn' + (type === 'simple' ? ' active' : '');
   
-  // すでにQR表示中なら再生成
+  // ボタンの見た目更新
+  const types = ['json', 'ican', 'xcb', 'raw'];
+  types.forEach(t => {
+    const btn = document.getElementById('btn-' + t);
+    if(t === type) btn.classList.add('active');
+    else btn.classList.remove('active');
+  });
+
+  // 結果が表示されていれば再生成
   if(document.getElementById('result').style.display === 'block') {
     generatePayTo();
   }
@@ -133,7 +141,6 @@ async function fetchRate() {
     }
   } catch (error) {
     rateDisplay.innerText = "レート取得失敗";
-    rateDisplay.style.color = "#dc3545";
   } finally {
     reloadBtn.innerText = "↻ 更新";
   }
@@ -181,28 +188,43 @@ function generatePayTo() {
   if (!rate || rate <= 0) { alert("レートを更新してください"); return; }
 
   const xcbAmount = (jpy / rate).toFixed(4);
-  let paytoLink = "";
+  let qrData = "";
 
-  // === 形式の切り替えロジック ===
-  if (currentQrType === 'core') {
-    // Type A: 今までの形式 (payto://core/...)
-    paytoLink = `payto://core/${address}?amount=${xcbAmount}&label=Payment`;
+  // === QRデータ生成ロジックの分岐 ===
+  if (currentQrType === 'json') {
+    // Type 1: JSON形式 (Core Laboratories仕様準拠)
+    // 構造: { "amount": { "value": 数値 }, "destination": "アドレス" }
+    const payload = {
+      amount: { value: parseFloat(xcbAmount) },
+      destination: address,
+      message: { value: "Coffee" }
+    };
+    qrData = JSON.stringify(payload);
+    
+  } else if (currentQrType === 'ican') {
+    // Type 2: ICAN URI形式
+    // payto://ican/xcb:アドレス?amount=...
+    qrData = `payto://ican/xcb:${address}?amount=${xcbAmount}&label=Coffee`;
+    
   } else if (currentQrType === 'xcb') {
-    // Type B: 通貨コード形式 (payto://xcb/...) ※これが正解の可能性大
-    paytoLink = `payto://xcb/${address}?amount=${xcbAmount}&label=Payment`;
+    // Type 3: シンプルURI形式
+    // payto://xcb/アドレス?amount=...
+    qrData = `payto://xcb/${address}?amount=${xcbAmount}&label=Coffee`;
+    
   } else {
-    // Type C: シンプル形式 (xcb:...)
-    paytoLink = `xcb:${address}?amount=${xcbAmount}`;
+    // Type 4: Raw (アドレスのみ)
+    // 金額情報は含まれないが、アドレスが正しいか確認できる
+    qrData = address;
   }
-  // ==========================
+  // ==================================
 
-  const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&margin=10&data=${encodeURIComponent(paytoLink)}`;
+  const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&margin=10&data=${encodeURIComponent(qrData)}`;
 
   document.getElementById('qr-image').src = qrUrl;
   document.getElementById('display-xcb').innerText = xcbAmount;
   
-  // デバッグ用テキスト表示
-  document.getElementById('qr-data-preview').innerText = "Data: " + paytoLink;
+  // デバッグ表示更新
+  document.getElementById('qr-data-preview').innerText = qrData;
 
   const resultDiv = document.getElementById('result');
   resultDiv.style.display = 'block';
