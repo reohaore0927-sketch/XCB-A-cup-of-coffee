@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>XCB-一杯のコーヒー</title>
+
 <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%22512%22 height=%22512%22 viewBox=%220 0 512 512%22><rect width=%22512%22 height=%22512%22 fill=%22%23ffffff%22/><text x=%2250%25%22 y=%2250%25%22 font-family=%22sans-serif%22 font-weight=%22bold%22 font-size=%22120%22 fill=%22%23333333%22 text-anchor=%22middle%22 dominant-baseline=%22central%22>☕ XCB</text></svg>">
 <link rel="icon" type="image/png" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%22512%22 height=%22512%22 viewBox=%220 0 512 512%22><rect width=%22512%22 height=%22512%22 fill=%22%23ffffff%22/><text x=%2250%25%22 y=%2250%25%22 font-family=%22sans-serif%22 font-weight=%22bold%22 font-size=%22120%22 fill=%22%23333333%22 text-anchor=%22middle%22 dominant-baseline=%22central%22>☕ XCB</text></svg>">
 <meta name="theme-color" content="#f5f7fa">
@@ -13,30 +14,25 @@
   h2 { text-align: center; color: #333; margin-bottom: 20px; letter-spacing: 0.05em; font-size: 24px; }
   .card { background: white; padding: 25px; border-radius: 16px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); margin-bottom: 20px; }
   label { display: block; font-weight: bold; margin-bottom: 8px; font-size: 14px; color: #666; }
-  input, textarea { width: 100%; padding: 15px; margin-bottom: 5px; box-sizing: border-box; font-size: 16px; border: 2px solid #eee; border-radius: 10px; -webkit-appearance: none; transition: all 0.2s; }
-  input:focus, textarea:focus { border-color: #007bff; outline: none; }
+  input { width: 100%; padding: 15px; margin-bottom: 5px; box-sizing: border-box; font-size: 20px; border: 2px solid #eee; border-radius: 10px; -webkit-appearance: none; transition: all 0.2s; }
+  input:focus { border-color: #007bff; outline: none; }
   
-  /* ボタン */
-  button { width: 100%; padding: 16px; background-color: #007bff; color: white; border: none; font-size: 18px; font-weight: bold; cursor: pointer; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,123,255,0.2); }
-  button:active { transform: scale(0.98); background-color: #0056b3; }
-  button:disabled { background-color: #ccc; box-shadow: none; cursor: not-allowed; transform: none; }
-  button.secondary { background-color: #f0f2f5; color: #555; font-size: 14px; padding: 8px 12px; margin-bottom: 0; box-shadow: none; border: 1px solid #ddd; width: auto; }
-
-  /* 開発者用フォーマットエリア */
-  .dev-zone { background: #333; color: white; padding: 15px; border-radius: 10px; margin-bottom: 20px; }
-  .dev-zone label { color: #ccc; }
-  .dev-zone textarea { background: #444; color: #0f0; border: 1px solid #555; font-family: monospace; font-size: 14px; height: 80px; }
-  .dev-note { font-size: 11px; color: #aaa; margin-top: 5px; line-height: 1.4; }
+  /* エラー時の赤枠 */
+  input.input-error { border-color: #dc3545; background-color: #fff8f8; }
 
   .live-preview { text-align: right; font-size: 20px; color: #007bff; font-weight: bold; margin-bottom: 20px; min-height: 1.5em; }
   .preview-warn { color: #dc3545 !important; font-size: 16px; }
+
+  button { width: 100%; padding: 16px; background-color: #007bff; color: white; border: none; font-size: 18px; font-weight: bold; cursor: pointer; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,123,255,0.2); transition: transform 0.1s, background 0.2s; }
+  button:active { transform: scale(0.98); background-color: #0056b3; }
+  button:disabled { background-color: #ccc; box-shadow: none; cursor: not-allowed; transform: none; }
   
-  #result { display: none; text-align: center; border-top: 2px dashed #eee; padding-top: 20px; margin-top: 10px; }
+  button.secondary { background-color: #f0f2f5; color: #555; font-size: 14px; padding: 8px 12px; margin-bottom: 0; box-shadow: none; border: 1px solid #ddd; width: auto; }
+  
+  #result { display: none; text-align: center; border-top: 2px dashed #eee; padding-top: 20px; margin-top: 10px; animation: fadeIn 0.3s ease-in; }
   #qr-image { margin: 15px auto; display: block; max-width: 100%; border-radius: 12px; border: 2px solid #eee; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
   .total-display { font-size: 28px; font-weight: 800; color: #333; margin: 10px 0; word-break: break-all; }
-  
-  /* デバッグ表示 */
-  .debug-info { font-size: 11px; color: #666; margin-top: 10px; text-align: left; background: #f0f0f0; padding: 10px; border-radius: 6px; word-break: break-all; font-family: monospace; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
 </style>
 </head>
 <body>
@@ -54,22 +50,10 @@
     <input type="hidden" id="currentRate" value="0">
   </div>
 
-  <div class="dev-zone">
-    <label>🔧 QRフォーマット設定 (正解を見つけてください)</label>
-    <textarea id="qrTemplate" onchange="saveTemplate()">${address}</textarea>
-    <div class="dev-note">
-      CorePassの正規QRコードをカメラで読み取り、その文字の形式をここにコピーしてください。<br>
-      <strong>${address}</strong> はアドレスに、<strong>${amount}</strong> は枚数に置き換わります。<br>
-      <br>
-      <span style="color:#ff9;">【試すべきパターン】</span><br>
-      1. 単純: <code>${address}</code> (金額なし・最も確実)<br>
-      2. 形式A: <code>xcb:${address}?amount=${amount}</code><br>
-      3. 形式B: <code>core:${address}?amount=${amount}</code>
-    </div>
-  </div>
   <div class="card">
     <label>請求金額 (最大500円)</label>
     <input type="number" id="jpyAmount" placeholder="0" inputmode="numeric" max="500" oninput="calculatePreview()" onclick="this.select();">
+    
     <div class="live-preview" id="live-xcb">0.0000 XCB</div>
     
     <button id="generateBtn" onclick="generatePayTo()">QRコード作成</button>
@@ -78,22 +62,16 @@
       <div style="font-size:14px; color:#666; margin-bottom:5px;">お支払い合計</div>
       <div class="total-display"><span id="display-xcb">0</span> XCB</div>
       <img id="qr-image" src="" alt="QR Code" width="250" height="250">
-      
       <div style="font-size:12px; color:#aaa; margin-top:10px; font-weight:bold;">CorePassなどでスキャン</div>
-      
-      <div class="debug-info">
-        <strong>作成されたデータ:</strong><br>
-        <span id="qr-data-preview">--</span>
-      </div>
     </div>
   </div>
 
 <script>
+// 設定: 上限金額
 const MAX_AMOUNT = 500;
 
 window.onload = function() {
   loadAddress();
-  loadTemplate(); // テンプレート読み込み
   fetchRate();
 };
 
@@ -112,27 +90,11 @@ function loadAddress() {
   }
 }
 
-// テンプレート保存機能
-function saveTemplate() {
-  const tpl = document.getElementById('qrTemplate').value;
-  localStorage.setItem('xcb_qr_template', tpl);
-}
-
-function loadTemplate() {
-  const tpl = localStorage.getItem('xcb_qr_template');
-  // デフォルトは「最も安全な」アドレスのみの形式にしておきます
-  // これなら金額は自動入力されませんが、送金画面は必ず開くはずです
-  if(tpl) {
-    document.getElementById('qrTemplate').value = tpl;
-  } else {
-    document.getElementById('qrTemplate').value = "${address}";
-  }
-}
-
 async function fetchRate() {
   const rateDisplay = document.getElementById('rate-display');
   const reloadBtn = document.getElementById('reload-btn');
   reloadBtn.innerText = "...";
+  rateDisplay.style.opacity = "0.5";
   
   try {
     const response = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=core-blockchain&vs_currencies=jpy');
@@ -146,8 +108,10 @@ async function fetchRate() {
     }
   } catch (error) {
     rateDisplay.innerText = "レート取得失敗";
+    rateDisplay.style.color = "#dc3545";
   } finally {
     reloadBtn.innerText = "↻ 更新";
+    rateDisplay.style.opacity = "1";
   }
 }
 
@@ -187,32 +151,26 @@ function generatePayTo() {
   const address = document.getElementById('address').value.trim();
   const rate = parseFloat(document.getElementById('currentRate').value);
   const jpy = parseFloat(document.getElementById('jpyAmount').value);
-  // テンプレートを取得
-  let template = document.getElementById('qrTemplate').value;
 
   if (!address) { alert("アドレスを入力してください"); return; }
   if (jpy > MAX_AMOUNT) { alert(`上限は${MAX_AMOUNT}円です`); return; }
   if (!rate || rate <= 0) { alert("レートを更新してください"); return; }
 
   const xcbAmount = (jpy / rate).toFixed(4);
-  
-  // === テンプレートの置換処理 ===
-  // ${address} と ${amount} を実際の値に書き換えます
-  let qrData = template.replace("${address}", address).replace("${amount}", xcbAmount);
-  // ==========================
 
-  const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&margin=10&data=${encodeURIComponent(qrData)}`;
+  // === 確定フォーマット: payto://xcb/[アドレス]?amount=[数量] ===
+  const paytoLink = `payto://xcb/${address}?amount=${xcbAmount}`;
+  // ==========================================================
+
+  const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&margin=10&data=${encodeURIComponent(paytoLink)}`;
 
   document.getElementById('qr-image').src = qrUrl;
   document.getElementById('display-xcb').innerText = xcbAmount;
-  document.getElementById('qr-data-preview').innerText = qrData;
-
+  
   const resultDiv = document.getElementById('result');
   resultDiv.style.display = 'block';
   document.getElementById('jpyAmount').blur();
   resultDiv.scrollIntoView({behavior: "smooth", block: "center"});
-  
-  saveTemplate(); // 成功したテンプレートを保存
 }
 </script>
 </body>
