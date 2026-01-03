@@ -16,9 +16,20 @@
   label { display: block; font-weight: bold; margin-bottom: 8px; font-size: 14px; color: #666; }
   input { width: 100%; padding: 15px; margin-bottom: 5px; box-sizing: border-box; font-size: 20px; border: 2px solid #eee; border-radius: 10px; -webkit-appearance: none; transition: border-color 0.2s; }
   input:focus { border-color: #007bff; outline: none; }
+  
+  /* エラー時の赤枠スタイル */
+  input.input-error { border-color: #dc3545; background-color: #fff8f8; }
+
   .live-preview { text-align: right; font-size: 20px; color: #007bff; font-weight: bold; margin-bottom: 20px; min-height: 1.5em; }
+  
+  /* 警告メッセージ用 */
+  .preview-warn { color: #dc3545 !important; font-size: 16px; }
+
   button { width: 100%; padding: 16px; background-color: #007bff; color: white; border: none; font-size: 18px; font-weight: bold; cursor: pointer; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,123,255,0.2); transition: transform 0.1s, background 0.2s; }
   button:active { transform: scale(0.98); background-color: #0056b3; }
+  /* 無効化ボタンのスタイル */
+  button:disabled { background-color: #ccc; box-shadow: none; cursor: not-allowed; transform: none; }
+
   button.secondary { background-color: #f0f2f5; color: #555; font-size: 14px; padding: 8px 12px; margin-bottom: 0; box-shadow: none; border: 1px solid #ddd; width: auto; }
   #result { display: none; text-align: center; border-top: 2px dashed #eee; padding-top: 20px; margin-top: 10px; animation: fadeIn 0.3s ease-in; }
   #qr-image { margin: 15px auto; display: block; max-width: 100%; border-radius: 12px; border: 2px solid #eee; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
@@ -31,8 +42,8 @@
   <h2>☕ 一杯のコーヒー</h2>
 
   <div class="card">
-    <label>受取アドレス (cb1...)</label>
-    <input type="text" id="address" placeholder="cb1..." value="" onchange="saveAddress()">
+    <label>受取アドレス</label>
+    <input type="text" id="address" placeholder="XCB Wallet Address" value="" onchange="saveAddress()">
     
     <div style="display: flex; justify-content: space-between; align-items: center; margin-top:12px; padding-top:12px; border-top:1px solid #eee;">
       <span id="rate-display" style="font-size:13px; color:#888;">レート取得中...</span>
@@ -42,10 +53,12 @@
   </div>
 
   <div class="card">
-    <label>請求金額 (円)</label>
-    <input type="number" id="jpyAmount" placeholder="0" inputmode="numeric" oninput="calculatePreview()" onclick="this.select();">
+    <label>請求金額 (最大500円)</label>
+    <input type="number" id="jpyAmount" placeholder="0" inputmode="numeric" max="500" oninput="calculatePreview()" onclick="this.select();">
+    
     <div class="live-preview" id="live-xcb">0.0000 XCB</div>
-    <button onclick="generatePayTo()">QRコード作成</button>
+    
+    <button id="generateBtn" onclick="generatePayTo()">QRコード作成</button>
 
     <div id="result">
       <div style="font-size:14px; color:#666; margin-bottom:5px;">お支払い合計</div>
@@ -56,15 +69,21 @@
   </div>
 
 <script>
+// 設定: 上限金額
+const MAX_AMOUNT = 500;
+
 window.onload = function() {
   loadAddress();
   fetchRate();
 };
 
 function saveAddress() {
-  const addr = document.getElementById('address').value;
+  // 保存時に空白を自動削除(.trim)
+  const addr = document.getElementById('address').value.trim();
   if(addr) {
     localStorage.setItem('xcb_shop_address', addr);
+    // 入力欄も綺麗な状態に更新
+    document.getElementById('address').value = addr;
   }
 }
 
@@ -108,9 +127,26 @@ async function fetchRate() {
 function calculatePreview() {
   const rate = parseFloat(document.getElementById('currentRate').value);
   let jpyInput = document.getElementById('jpyAmount').value;
+  const inputElem = document.getElementById('jpyAmount');
+  const previewBox = document.getElementById('live-xcb');
+  const generateBtn = document.getElementById('generateBtn');
+
   if (jpyInput === "" || jpyInput < 0) jpyInput = 0;
   const jpy = parseFloat(jpyInput);
-  const previewBox = document.getElementById('live-xcb');
+
+  // === 500円制限ロジック ===
+  if (jpy > MAX_AMOUNT) {
+    previewBox.innerText = `⚠️ 上限は${MAX_AMOUNT}円です`;
+    previewBox.className = "live-preview preview-warn"; // 赤文字にする
+    inputElem.classList.add("input-error"); // 入力欄を赤枠に
+    generateBtn.disabled = true; // ボタンを押せなくする
+    return;
+  } else {
+    previewBox.className = "live-preview";
+    inputElem.classList.remove("input-error");
+    generateBtn.disabled = false;
+  }
+  // =======================
 
   if (rate > 0 && jpy > 0) {
     const xcb = (jpy / rate).toFixed(4);
@@ -123,13 +159,25 @@ function calculatePreview() {
 }
 
 function generatePayTo() {
-  const address = document.getElementById('address').value;
+  // アドレスの空白を除去して取得
+  const address = document.getElementById('address').value.trim();
   const rate = parseFloat(document.getElementById('currentRate').value);
   const jpy = parseFloat(document.getElementById('jpyAmount').value);
 
   saveAddress();
 
-  if (!address.startsWith("cb1")) { alert("正しいXCBアドレス(cb1...)を設定してください"); return; }
+  // === 修正点: cb1チェックを削除し、単純な入力チェックに変更 ===
+  if (!address) { 
+    alert("アドレスを入力してください"); 
+    return; 
+  }
+  
+  // === 500円チェック ===
+  if (jpy > MAX_AMOUNT) {
+    alert(`エラー: 一回の上限は${MAX_AMOUNT}円です`);
+    return;
+  }
+
   if (rate <= 0) { alert("レートが取得できていません。「更新」ボタンを押してください"); return; }
   if (!jpy || jpy <= 0) { alert("有効な金額を入力してください"); return; }
 
